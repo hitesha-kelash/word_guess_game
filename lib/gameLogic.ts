@@ -15,6 +15,15 @@ export const DIFFICULTY_COLORS: Record<DifficultyLevel, string> = {
   pro: 'bg-red-500'
 };
 
+export const POINTS_SYSTEM = {
+  basic: { win: 50, lose: -10 },
+  medium: { win: 100, lose: -20 },
+  advance: { win: 200, lose: -30 },
+  pro: { win: 500, lose: -50 }
+};
+
+export const STARTING_POINTS = 1000;
+
 export function getRandomWord(level: DifficultyLevel): string {
   const words = wordsData[level];
   return words[Math.floor(Math.random() * words.length)].toLowerCase();
@@ -73,4 +82,17 @@ export function getNextLevel(currentLevel: DifficultyLevel): DifficultyLevel | n
   const levels: DifficultyLevel[] = ['basic', 'medium', 'advance', 'pro'];
   const currentIndex = levels.indexOf(currentLevel);
   return currentIndex < levels.length - 1 ? levels[currentIndex + 1] : null;
+}
+
+export function calculatePoints(level: DifficultyLevel, won: boolean, guessCount: number, maxGuesses: number): number {
+  const basePoints = POINTS_SYSTEM[level][won ? 'win' : 'lose'];
+  
+  if (won) {
+    // Bonus points for fewer guesses
+    const efficiency = (maxGuesses - guessCount) / maxGuesses;
+    const bonusMultiplier = 1 + (efficiency * 0.5); // Up to 50% bonus
+    return Math.round(basePoints * bonusMultiplier);
+  }
+  
+  return basePoints;
 }
