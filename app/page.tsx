@@ -12,6 +12,7 @@ import { PlayerStats } from '@/components/PlayerStats';
 import { AuthModal } from '@/components/AuthModal';
 import { UserProfile } from '@/components/UserProfile';
 import { RealTimeStats } from '@/components/RealTimeStats';
+import { LevelSelector } from '@/components/LevelSelector';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { GameState, PlayerStats as PlayerStatsType, DifficultyLevel, User, GameSession } from '@/types/game';
 import { 
@@ -23,9 +24,10 @@ import {
   DIFFICULTY_COLORS,
   getNextLevel,
   calculatePoints,
-  STARTING_POINTS
+  STARTING_POINTS,
+  UNLOCK_REQUIREMENTS
 } from '@/lib/gameLogic';
-import { Gamepad2, BarChart3, Play, Code2, Heart, User as UserIcon } from 'lucide-react';
+import { Gamepad2, BarChart3, Play, Code2, Heart, User as UserIcon, Settings, Home } from 'lucide-react';
 
 const initialPlayerStats: PlayerStatsType = {
   gamesPlayed: 0,
@@ -51,6 +53,7 @@ export default function Home() {
   const [gameStarted, setGameStarted] = useState(false);
   const [levelUnlocked, setLevelUnlocked] = useState<DifficultyLevel | null>(null);
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null);
+  const [gameProcessed, setGameProcessed] = useState(false);
 
   const createInitialGameState = useCallback((level: DifficultyLevel = 'basic'): GameState => {
     const word = getRandomWord(level);
@@ -93,22 +96,11 @@ export default function Home() {
     });
   }, [gameState.gameStatus, gameState.guessedLetters]);
 
-  // Update session points in real-time
+  // Process game end only once
   useEffect(() => {
-    if (currentSession && gameState.gameStatus === 'playing') {
-      const points = calculatePoints(
-        gameState.currentLevel, 
-        true, 
-        gameState.guessedLetters.length, 
-        gameState.maxWrongGuesses
-      );
-      setCurrentSession(prev => prev ? { ...prev, pointsEarned: points } : null);
-    }
-  }, [gameState.guessedLetters, gameState.currentLevel, gameState.maxWrongGuesses, currentSession]);
-
-  // Update player stats when game ends
-  useEffect(() => {
-    if (gameState.gameStatus === 'won' || gameState.gameStatus === 'lost') {
+    if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost') && !gameProcessed) {
+      setGameProcessed(true);
+      
       const isWon = gameState.gameStatus === 'won';
       const points = calculatePoints(
         gameState.currentLevel, 
@@ -120,6 +112,7 @@ export default function Home() {
       setPlayerStats(prev => {
         const newStats = { ...prev };
         newStats.gamesPlayed += 1;
+        
         if (isWon) {
           newStats.gamesWon += 1;
           newStats.currentStreak += 1;
@@ -129,6 +122,7 @@ export default function Home() {
         } else {
           newStats.currentStreak = 0;
         }
+        
         newStats.winRate = Math.round((newStats.gamesWon / newStats.gamesPlayed) * 100);
         newStats.totalPoints = Math.max(0, newStats.totalPoints + points);
 
@@ -136,7 +130,14 @@ export default function Home() {
         const levelStat = newStats.levelStats[gameState.currentLevel];
         levelStat.played += 1;
         levelStat.pointsEarned += points;
-        if (isWon) levelStat.won += 1;
+        if (isWon) {
+          levelStat.won += 1;
+          
+          // Update level streak
+          if (newStats.currentStreak > levelStat.bestStreak) {
+            levelStat.bestStreak = newStats.currentStreak;
+          }
+        }
 
         // Check for level unlock
         const nextLevel = getNextLevel(gameState.currentLevel);
@@ -157,16 +158,18 @@ export default function Home() {
           endTime: Date.now(),
           pointsEarned: points,
           won: isWon,
+          word: gameState.currentWord,
           guessCount: gameState.guessedLetters.length
         } : null);
       }
     }
-  }, [gameState.gameStatus, gameState.currentLevel, gameState.guessedLetters.length, gameState.maxWrongGuesses, setPlayerStats, currentSession]);
+  }, [gameState.gameStatus, gameState.currentLevel, gameState.guessedLetters.length, gameState.maxWrongGuesses, gameState.currentWord, gameProcessed, setPlayerStats, currentSession]);
 
   const handleNewGame = useCallback((level?: DifficultyLevel) => {
     const newLevel = level || gameState.currentLevel;
     setGameState(createInitialGameState(newLevel));
     setLevelUnlocked(null);
+    setGameProcessed(false);
     
     // Create new session
     setCurrentSession({
@@ -183,6 +186,7 @@ export default function Home() {
     if (playerStats.unlockedLevels.includes(level)) {
       setGameState(createInitialGameState(level));
       setLevelUnlocked(null);
+      setGameProcessed(false);
       
       // Create new session
       setCurrentSession({
@@ -198,61 +202,99 @@ export default function Home() {
 
   const handleAuth = (newUser: User) => {
     setUser(newUser);
-    // Initialize stats with starting points if new user
-    if (playerStats.totalPoints === STARTING_POINTS && playerStats.gamesPlayed === 0) {
-      setPlayerStats(prev => ({ ...prev, totalPoints: STARTING_POINTS }));
-    }
+    setShowAuth(false);
   };
 
   const handleSignOut = () => {
     setUser(null);
     setGameStarted(false);
     setShowStats(false);
+    setGameState(createInitialGameState('basic'));
+    setCurrentSession(null);
+    setGameProcessed(false);
   };
 
   const wrongLetters = gameState.guessedLetters.filter(letter => 
     !gameState.currentWord.includes(letter)
   );
 
+  // Calculate current points for display
+  const currentPoints = gameState.gameStatus === 'playing' && currentSession
+    ? calculatePoints(gameState.currentLevel, true, gameState.guessedLetters.length, gameState.maxWrongGuesses)
+    : currentSession?.pointsEarned || 0;
+
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center py-12">
-            <div className="flex justify-center mb-6">
-              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-                <Gamepad2 className="w-10 h-10 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center py-16">
+            <div className="flex justify-center mb-8">
+              <div className="w-24 h-24 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-2xl">
+                <Gamepad2 className="w-12 h-12 text-white" />
               </div>
             </div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
-              Word Guessing Game
+            <h1 className="text-6xl md:text-7xl font-bold bg-gradient-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-6">
+              WordMaster
             </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              Challenge yourself with four difficulty levels! Sign in to track your progress, earn points, and compete with others.
+            <p className="text-xl text-slate-300 mb-12 max-w-3xl mx-auto leading-relaxed">
+              Challenge your vocabulary across four difficulty levels. Earn points, unlock achievements, and compete with friends in this modern word-guessing experience.
             </p>
 
+            {/* Feature Highlights */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 max-w-4xl mx-auto">
+              <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                    <Trophy className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Progressive Difficulty</h3>
+                  <p className="text-slate-400 text-sm">Four challenging levels from Basic to Professional</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                    <BarChart3 className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Real-time Analytics</h3>
+                  <p className="text-slate-400 text-sm">Track your performance with detailed statistics</p>
+                </CardContent>
+              </Card>
+              
+              <Card className="bg-slate-800/50 border-slate-700 backdrop-blur-sm">
+                <CardContent className="p-6 text-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-amber-500 to-orange-500 rounded-lg mx-auto mb-4 flex items-center justify-center">
+                    <Star className="w-6 h-6 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">Points & Rewards</h3>
+                  <p className="text-slate-400 text-sm">Earn points and unlock new difficulty levels</p>
+                </CardContent>
+              </Card>
+            </div>
+
             {/* Developer Credits */}
-            <div className="mb-8">
-              <Card className="max-w-md mx-auto bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 shadow-lg">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-center gap-2 mb-3">
-                    <Code2 className="w-5 h-5 text-purple-600" />
-                    <span className="text-lg font-semibold text-purple-800">Crafted with</span>
-                    <Heart className="w-5 h-5 text-red-500 animate-pulse" />
+            <div className="mb-12">
+              <Card className="max-w-lg mx-auto bg-gradient-to-r from-purple-900/50 to-pink-900/50 border-2 border-purple-500/30 backdrop-blur-sm">
+                <CardContent className="p-8">
+                  <div className="flex items-center justify-center gap-3 mb-4">
+                    <Code2 className="w-6 h-6 text-purple-400" />
+                    <span className="text-xl font-semibold text-purple-200">Crafted with</span>
+                    <Heart className="w-6 h-6 text-red-400 animate-pulse" />
                   </div>
                   <div className="text-center">
-                    <p className="text-sm text-purple-700 mb-2">Developed by</p>
-                    <div className="flex justify-center gap-3">
-                      <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 text-sm font-medium">
+                    <p className="text-sm text-purple-300 mb-3">Developed by</p>
+                    <div className="flex justify-center gap-4">
+                      <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-6 py-3 text-base font-semibold">
                         Hitesha
                       </Badge>
-                      <span className="text-purple-600 font-bold text-lg">&</span>
-                      <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 text-sm font-medium">
+                      <span className="text-purple-400 font-bold text-2xl">&</span>
+                      <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-6 py-3 text-base font-semibold">
                         Parshad
                       </Badge>
                     </div>
-                    <p className="text-xs text-purple-600 mt-2 italic">
-                      Building amazing experiences, one word at a time
+                    <p className="text-sm text-purple-400 mt-4 italic">
+                      Building exceptional gaming experiences
                     </p>
                   </div>
                 </CardContent>
@@ -262,10 +304,10 @@ export default function Home() {
             <Button 
               size="lg" 
               onClick={() => setShowAuth(true)}
-              className="px-8 py-6 text-lg"
+              className="px-12 py-6 text-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 shadow-2xl"
             >
-              <UserIcon className="w-5 h-5 mr-2" />
-              Sign In to Play
+              <UserIcon className="w-6 h-6 mr-3" />
+              Start Your Journey
             </Button>
           </div>
         </div>
@@ -281,50 +323,45 @@ export default function Home() {
 
   if (!gameStarted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <div className="container mx-auto max-w-4xl">
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+        <div className="container mx-auto max-w-6xl">
           <div className="flex justify-between items-start mb-8">
             <div className="text-center flex-1">
               <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
+                <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center shadow-2xl">
                   <Gamepad2 className="w-10 h-10 text-white" />
                 </div>
               </div>
-              <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
-                Word Guessing Game
+              <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-4">
+                WordMaster
               </h1>
-              <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-                Challenge yourself with four difficulty levels! Guess the hidden word using the given hints. 
-                You have 10 wrong guesses before the game ends.
+              <p className="text-xl text-slate-300 mb-8 max-w-2xl mx-auto">
+                Ready to challenge your vocabulary? Choose your difficulty and start earning points!
               </p>
             </div>
             
             <UserProfile user={user} stats={playerStats} onSignOut={handleSignOut} />
           </div>
 
-          {/* Developer Credits */}
+          {/* Developer Credits - Compact */}
           <div className="mb-8">
-            <Card className="max-w-md mx-auto bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 shadow-lg">
+            <Card className="max-w-md mx-auto bg-slate-800/50 border-slate-700 backdrop-blur-sm">
               <CardContent className="p-6">
                 <div className="flex items-center justify-center gap-2 mb-3">
-                  <Code2 className="w-5 h-5 text-purple-600" />
-                  <span className="text-lg font-semibold text-purple-800">Crafted with</span>
-                  <Heart className="w-5 h-5 text-red-500 animate-pulse" />
+                  <Code2 className="w-5 h-5 text-purple-400" />
+                  <span className="text-lg font-semibold text-purple-200">Crafted by</span>
+                  <Heart className="w-5 h-5 text-red-400 animate-pulse" />
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-purple-700 mb-2">Developed by</p>
                   <div className="flex justify-center gap-3">
                     <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 text-sm font-medium">
                       Hitesha
                     </Badge>
-                    <span className="text-purple-600 font-bold text-lg">&</span>
+                    <span className="text-purple-400 font-bold text-lg">&</span>
                     <Badge className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white px-4 py-2 text-sm font-medium">
                       Parshad
                     </Badge>
                   </div>
-                  <p className="text-xs text-purple-600 mt-2 italic">
-                    Building amazing experiences, one word at a time
-                  </p>
                 </div>
               </CardContent>
             </Card>
@@ -337,7 +374,7 @@ export default function Home() {
                 setGameStarted(true);
                 handleNewGame();
               }}
-              className="px-8 py-6 text-lg"
+              className="px-8 py-6 text-lg bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700"
             >
               <Play className="w-5 h-5 mr-2" />
               Start Playing
@@ -346,35 +383,20 @@ export default function Home() {
               size="lg" 
               variant="outline" 
               onClick={() => setShowStats(true)}
-              className="px-8 py-6 text-lg"
+              className="px-8 py-6 text-lg border-slate-600 text-slate-300 hover:bg-slate-800"
             >
               <BarChart3 className="w-5 h-5 mr-2" />
-              View Stats
+              View Statistics
             </Button>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-            {(['basic', 'medium', 'advance', 'pro'] as DifficultyLevel[]).map(level => {
-              const isUnlocked = playerStats.unlockedLevels.includes(level);
-              const stats = playerStats.levelStats[level];
-              
-              return (
-                <Card key={level} className={`${isUnlocked ? 'opacity-100' : 'opacity-50'}`}>
-                  <CardContent className="p-4 text-center">
-                    <Badge className={`${DIFFICULTY_COLORS[level]} text-white mb-2`}>
-                      {DIFFICULTY_LABELS[level]}
-                    </Badge>
-                    <div className="text-sm text-muted-foreground">
-                      {isUnlocked ? `${stats.won}/${stats.played} won` : 'Locked'}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {isUnlocked ? `${stats.pointsEarned} pts` : ''}
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <LevelSelector 
+            playerStats={playerStats}
+            onLevelSelect={(level) => {
+              setGameStarted(true);
+              handleLevelChange(level);
+            }}
+          />
 
           {showStats && (
             <div className="mt-8">
@@ -383,8 +405,9 @@ export default function Home() {
                 <Button 
                   variant="outline" 
                   onClick={() => setShowStats(false)}
+                  className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
-                  Hide Stats
+                  Hide Statistics
                 </Button>
               </div>
             </div>
@@ -395,33 +418,52 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <div className="container mx-auto max-w-4xl">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4">
+      <div className="container mx-auto max-w-6xl">
         <div className="flex justify-between items-start mb-6">
           <div className="text-center flex-1">
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-              Word Guessing Game
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+              WordMaster
             </h1>
             
-            {/* Developer Credits - Compact version for game screen */}
+            {/* Developer Credits - Game screen */}
             <div className="mb-4">
-              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
-                <Code2 className="w-4 h-4 text-purple-500" />
+              <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+                <Code2 className="w-4 h-4 text-purple-400" />
                 <span>Crafted by</span>
-                <span className="font-semibold text-purple-600">Hitesha</span>
-                <span className="text-purple-500">&</span>
-                <span className="font-semibold text-blue-600">Parshad</span>
-                <Heart className="w-4 h-4 text-red-500" />
+                <span className="font-semibold text-purple-300">Hitesha</span>
+                <span className="text-purple-400">&</span>
+                <span className="font-semibold text-blue-300">Parshad</span>
+                <Heart className="w-4 h-4 text-red-400" />
               </div>
             </div>
 
             <div className="flex justify-center gap-4 mb-6">
-              <Button variant="outline" size="sm" onClick={() => setShowStats(!showStats)}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowStats(!showStats)}
+                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
                 <BarChart3 className="w-4 h-4 mr-2" />
                 {showStats ? 'Hide Stats' : 'Show Stats'}
               </Button>
-              <Button variant="outline" size="sm" onClick={() => handleNewGame()}>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => handleNewGame()}
+                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
                 New Game
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setGameStarted(false)}
+                className="border-slate-600 text-slate-300 hover:bg-slate-800"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Menu
               </Button>
             </div>
           </div>
@@ -452,6 +494,7 @@ export default function Home() {
             onLevelChange={handleLevelChange}
             unlockedLevels={playerStats.unlockedLevels}
             levelUnlocked={levelUnlocked}
+            pointsEarned={currentPoints}
           />
         )}
       </div>
