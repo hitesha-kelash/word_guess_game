@@ -48,8 +48,8 @@ const initialPlayerStats: PlayerStatsType = {
 };
 
 export default function Home() {
-  const [user, setUser] = useLocalStorage<User | null>('wordGameUser', null);
-  const [playerStats, setPlayerStats] = useLocalStorage<PlayerStatsType>('wordGameStats', initialPlayerStats);
+  const [user, setUser, userLoaded] = useLocalStorage<User | null>('wordGameUser', null);
+  const [playerStats, setPlayerStats, statsLoaded] = useLocalStorage<PlayerStatsType>('wordGameStats', initialPlayerStats);
   const [showStats, setShowStats] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
   const [gameStarted, setGameStarted] = useState(false);
@@ -57,6 +57,12 @@ export default function Home() {
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null);
   const [gameProcessed, setGameProcessed] = useState(false);
   const [previousRank, setPreviousRank] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure we're on the client side
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const createInitialGameState = useCallback((level: DifficultyLevel = 'basic'): GameState => {
     const word = getRandomWord(level);
@@ -81,7 +87,9 @@ export default function Home() {
       return;
     }
 
-    audioManager.playSound('click', 0.3);
+    if (isClient && audioManager.playSound) {
+      audioManager.playSound('click', 0.3);
+    }
 
     setGameState(prev => {
       const newGuessedLetters = [...prev.guessedLetters, letter];
@@ -102,7 +110,7 @@ export default function Home() {
         gameStatus: newStatus
       };
     });
-  }, [gameState.gameStatus, gameState.guessedLetters]);
+  }, [gameState.gameStatus, gameState.guessedLetters, isClient]);
 
   const handleTimeUp = useCallback(() => {
     setGameState(prev => ({
@@ -120,7 +128,7 @@ export default function Home() {
 
   // Process game end only once
   useEffect(() => {
-    if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost' || gameState.gameStatus === 'timeout') && !gameProcessed) {
+    if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost' || gameState.gameStatus === 'timeout') && !gameProcessed && statsLoaded) {
       setGameProcessed(true);
       
       const isWon = gameState.gameStatus === 'won';
@@ -197,7 +205,7 @@ export default function Home() {
         } : null);
       }
     }
-  }, [gameState.gameStatus, gameState.currentLevel, gameState.guessedLetters.length, gameState.maxWrongGuesses, gameState.currentWord, gameProcessed, setPlayerStats, currentSession, playerStats.totalPoints]);
+  }, [gameState.gameStatus, gameState.currentLevel, gameState.guessedLetters.length, gameState.maxWrongGuesses, gameState.currentWord, gameProcessed, setPlayerStats, currentSession, playerStats.totalPoints, statsLoaded]);
 
   const handleNewGame = useCallback((level?: DifficultyLevel) => {
     const newLevel = level || gameState.currentLevel;
@@ -280,6 +288,18 @@ export default function Home() {
   const currentPoints = gameState.gameStatus === 'playing' && currentSession
     ? calculatePoints(gameState.currentLevel, true, gameState.guessedLetters.length, gameState.maxWrongGuesses, true)
     : currentSession?.pointsEarned || 0;
+
+  // Show loading state until localStorage is loaded
+  if (!isClient || !userLoaded || !statsLoaded) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-white text-lg">Loading WordMaster...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -430,7 +450,9 @@ export default function Home() {
             <Button 
               size="lg" 
               onClick={() => {
-                audioManager.playSound('click');
+                if (isClient && audioManager.playSound) {
+                  audioManager.playSound('click');
+                }
                 setGameStarted(true);
                 handleNewGame();
               }}
@@ -443,7 +465,9 @@ export default function Home() {
               size="lg" 
               variant="outline" 
               onClick={() => {
-                audioManager.playSound('click');
+                if (isClient && audioManager.playSound) {
+                  audioManager.playSound('click');
+                }
                 setShowStats(true);
               }}
               className="px-8 py-6 text-lg border-slate-600 text-slate-300 hover:bg-slate-800"
@@ -456,7 +480,9 @@ export default function Home() {
           <LevelSelector 
             playerStats={playerStats}
             onLevelSelect={(level) => {
-              audioManager.playSound('click');
+              if (isClient && audioManager.playSound) {
+                audioManager.playSound('click');
+              }
               setGameStarted(true);
               handleLevelChange(level);
             }}
@@ -469,7 +495,9 @@ export default function Home() {
                 <Button 
                   variant="outline" 
                   onClick={() => {
-                    audioManager.playSound('click');
+                    if (isClient && audioManager.playSound) {
+                      audioManager.playSound('click');
+                    }
                     setShowStats(false);
                   }}
                   className="border-slate-600 text-slate-300 hover:bg-slate-800"
@@ -510,7 +538,9 @@ export default function Home() {
                 variant="outline" 
                 size="sm" 
                 onClick={() => {
-                  audioManager.playSound('click');
+                  if (isClient && audioManager.playSound) {
+                    audioManager.playSound('click');
+                  }
                   setShowStats(!showStats);
                 }}
                 className="border-slate-600 text-slate-300 hover:bg-slate-800"
@@ -522,7 +552,9 @@ export default function Home() {
                 variant="outline" 
                 size="sm" 
                 onClick={() => {
-                  audioManager.playSound('click');
+                  if (isClient && audioManager.playSound) {
+                    audioManager.playSound('click');
+                  }
                   handleNewGame();
                 }}
                 className="border-slate-600 text-slate-300 hover:bg-slate-800"
@@ -533,7 +565,9 @@ export default function Home() {
                 variant="outline" 
                 size="sm" 
                 onClick={() => {
-                  audioManager.playSound('click');
+                  if (isClient && audioManager.playSound) {
+                    audioManager.playSound('click');
+                  }
                   setGameStarted(false);
                 }}
                 className="border-slate-600 text-slate-300 hover:bg-slate-800"
