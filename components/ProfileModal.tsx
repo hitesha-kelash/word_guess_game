@@ -23,7 +23,8 @@ import {
   Lock,
   CheckCircle,
   Volume2,
-  VolumeX
+  VolumeX,
+  X
 } from 'lucide-react';
 import { User as UserType, PlayerStats, DifficultyLevel } from '@/types/game';
 import { 
@@ -66,22 +67,28 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
     audioManager.playSound('click');
   };
 
-  const totalGamesPlayed = stats.gamesPlayed;
-  const averageAccuracy = totalGamesPlayed > 0 ? Math.round((stats.gamesWon / totalGamesPlayed) * 100) : 0;
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl bg-slate-800 border-slate-700 max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-white">
-            <Avatar className="w-10 h-10">
+        <DialogHeader className="relative">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClose}
+            className="absolute right-0 top-0 p-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-full"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+          
+          <DialogTitle className="flex items-center gap-3 text-white pr-10">
+            <Avatar className="w-12 h-12">
               <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(stats.totalPoints)} text-white text-lg font-bold`}>
                 {user.isGuest ? '👤' : user.name.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
             <div>
               <div className="flex items-center gap-2">
-                <span>{user.name}</span>
+                <span className="text-xl">{user.name}</span>
                 {user.isGuest && <Badge variant="secondary" className="text-xs bg-slate-700 text-slate-300">Guest</Badge>}
               </div>
               <div className="flex items-center gap-1 text-sm text-slate-400">
@@ -94,13 +101,25 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
 
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-3 bg-slate-700">
-            <TabsTrigger value="overview" className="text-slate-300 data-[state=active]:bg-slate-600 data-[state=active]:text-white">
+            <TabsTrigger 
+              value="overview" 
+              className="text-slate-300 data-[state=active]:bg-slate-600 data-[state=active]:text-white"
+              onClick={() => audioManager.playSound('click', 0.3)}
+            >
               Overview
             </TabsTrigger>
-            <TabsTrigger value="levels" className="text-slate-300 data-[state=active]:bg-slate-600 data-[state=active]:text-white">
+            <TabsTrigger 
+              value="levels" 
+              className="text-slate-300 data-[state=active]:bg-slate-600 data-[state=active]:text-white"
+              onClick={() => audioManager.playSound('click', 0.3)}
+            >
               Levels
             </TabsTrigger>
-            <TabsTrigger value="settings" className="text-slate-300 data-[state=active]:bg-slate-600 data-[state=active]:text-white">
+            <TabsTrigger 
+              value="settings" 
+              className="text-slate-300 data-[state=active]:bg-slate-600 data-[state=active]:text-white"
+              onClick={() => audioManager.playSound('click', 0.3)}
+            >
               Settings
             </TabsTrigger>
           </TabsList>
@@ -383,12 +402,6 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
             </Card>
           </TabsContent>
         </Tabs>
-
-        <div className="flex justify-end pt-4 border-t border-slate-700">
-          <Button variant="outline" onClick={handleClose} className="border-slate-600 text-slate-300 hover:bg-slate-700">
-            Close
-          </Button>
-        </div>
       </DialogContent>
     </Dialog>
   );
