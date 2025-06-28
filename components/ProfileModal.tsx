@@ -78,7 +78,14 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
 
   const handleUserUpdate = (updatedUser: UserType) => {
     setCurrentUser(updatedUser);
+    // Close the update profile modal automatically
+    setShowUpdateProfile(false);
     // In a real app, you'd also update the parent component's user state
+    // For now, we'll just update the local state to reflect changes immediately
+  };
+
+  const handleCloseUpdateProfile = () => {
+    setShowUpdateProfile(false);
   };
 
   return (
@@ -445,7 +452,7 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
       {!currentUser.isGuest && (
         <UpdateProfileModal
           isOpen={showUpdateProfile}
-          onClose={() => setShowUpdateProfile(false)}
+          onClose={handleCloseUpdateProfile}
           user={currentUser}
           onUpdateUser={handleUserUpdate}
         />

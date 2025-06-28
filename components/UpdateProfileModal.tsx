@@ -177,10 +177,11 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
       setSuccess({ profile: true });
       setLoading(false);
       
-      // Auto-close success message
+      // Show success message briefly, then close modal
       setTimeout(() => {
         setSuccess({});
-      }, 3000);
+        handleClose(); // Close the modal after successful update
+      }, 1500);
     }, 1500);
   };
 
@@ -200,10 +201,11 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
       });
       setLoading(false);
       
-      // Auto-close success message
+      // Show success message briefly, then close modal
       setTimeout(() => {
         setSuccess({});
-      }, 3000);
+        handleClose(); // Close the modal after successful password update
+      }, 1500);
     }, 1500);
   };
 
@@ -389,7 +391,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                 {success.profile && (
                   <div className="flex items-center gap-2 p-3 bg-emerald-900/50 border border-emerald-700/50 rounded-lg">
                     <Check className="w-5 h-5 text-emerald-400" />
-                    <span className="text-emerald-300 font-medium">Profile updated successfully!</span>
+                    <span className="text-emerald-300 font-medium">Profile updated successfully! Closing...</span>
                   </div>
                 )}
 
@@ -406,6 +408,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                       className={`pl-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 ${
                         errors.name ? 'border-red-500' : ''
                       }`}
+                      disabled={loading}
                     />
                   </div>
                   {errors.name && (
@@ -429,6 +432,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                       className={`pl-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 ${
                         errors.email ? 'border-red-500' : ''
                       }`}
+                      disabled={loading}
                     />
                   </div>
                   {errors.email && (
@@ -472,7 +476,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                 {success.password && (
                   <div className="flex items-center gap-2 p-3 bg-emerald-900/50 border border-emerald-700/50 rounded-lg">
                     <Check className="w-5 h-5 text-emerald-400" />
-                    <span className="text-emerald-300 font-medium">Password updated successfully!</span>
+                    <span className="text-emerald-300 font-medium">Password updated successfully! Closing...</span>
                   </div>
                 )}
 
@@ -489,6 +493,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                       className={`pl-10 pr-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 ${
                         errors.currentPassword ? 'border-red-500' : ''
                       }`}
+                      disabled={loading}
                     />
                     <Button
                       type="button"
@@ -496,6 +501,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                       size="sm"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                       className="absolute right-1 top-1 p-2 text-slate-400 hover:text-white"
+                      disabled={loading}
                     >
                       {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
@@ -521,6 +527,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                       className={`pl-10 pr-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 ${
                         errors.newPassword ? 'border-red-500' : ''
                       }`}
+                      disabled={loading}
                     />
                     <Button
                       type="button"
@@ -528,6 +535,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                       size="sm"
                       onClick={() => setShowNewPassword(!showNewPassword)}
                       className="absolute right-1 top-1 p-2 text-slate-400 hover:text-white"
+                      disabled={loading}
                     >
                       {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
@@ -556,6 +564,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                       className={`pl-10 pr-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 ${
                         errors.confirmPassword ? 'border-red-500' : ''
                       }`}
+                      disabled={loading}
                     />
                     <Button
                       type="button"
@@ -563,6 +572,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                       size="sm"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                       className="absolute right-1 top-1 p-2 text-slate-400 hover:text-white"
+                      disabled={loading}
                     >
                       {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
@@ -601,7 +611,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                     <>
                       <Lock className="w-4 h-4 mr-2" />
                       Update Password
-                    </>
+                    </Button>
                   )}
                 </Button>
               </CardContent>
