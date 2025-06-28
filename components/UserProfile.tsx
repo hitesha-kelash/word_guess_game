@@ -53,7 +53,7 @@ export function UserProfile({ user, stats, onSignOut, onUserUpdate }: UserProfil
         >
           <Avatar className="w-10 h-10 cursor-pointer">
             <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(stats.totalPoints)} text-white text-sm font-bold`}>
-              {user.isGuest ? '👤' : user.name.charAt(0).toUpperCase()}
+              {user.isGuest ? '👤' : user.}
             </AvatarFallback>
           </Avatar>
         </Button>
