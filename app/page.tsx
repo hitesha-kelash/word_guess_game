@@ -278,7 +278,7 @@ export default function Home() {
 
   // Calculate current points for display
   const currentPoints = gameState.gameStatus === 'playing' && currentSession
-    ? calculatePoints(gameState.currentLevel, true, gameState.guessedLetters.length, gameState.maxWrongGuesses, gameState.gameStatus !== 'timeout')
+    ? calculatePoints(gameState.currentLevel, true, gameState.guessedLetters.length, gameState.maxWrongGuesses, true)
     : currentSession?.pointsEarned || 0;
 
   if (!user) {
