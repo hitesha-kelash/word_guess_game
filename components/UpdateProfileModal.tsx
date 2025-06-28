@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,7 +19,8 @@ import {
   EyeOff,
   Check,
   AlertCircle,
-  Upload
+  Upload,
+  Image as ImageIcon
 } from 'lucide-react';
 import { User as UserType } from '@/types/game';
 import { getPointsGradient } from '@/lib/gameLogic';
@@ -38,12 +39,14 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Profile form state
   const [profileForm, setProfileForm] = useState({
     name: user.name,
     email: user.email,
-    avatar: user.name.charAt(0).toUpperCase()
+    avatar: user.name.charAt(0).toUpperCase(),
+    profileImage: null as string | null
   });
 
   // Password form state
@@ -70,6 +73,48 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
     onClose();
   };
 
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setErrors({ profileImage: 'Please select a valid image file' });
+        return;
+      }
+
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors({ profileImage: 'Image size must be less than 5MB' });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const result = e.target?.result as string;
+        setProfileForm(prev => ({ 
+          ...prev, 
+          profileImage: result,
+          avatar: '' // Clear emoji avatar when image is uploaded
+        }));
+        setErrors(prev => ({ ...prev, profileImage: '' }));
+        audioManager.playSound('click', 0.3);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setProfileForm(prev => ({ 
+      ...prev, 
+      profileImage: null,
+      avatar: user.name.charAt(0).toUpperCase() // Reset to initial
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    audioManager.playSound('click', 0.3);
+  };
+
   const validateProfileForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -79,12 +124,10 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
       newErrors.name = 'Name must be at least 2 characters';
     }
 
-    if (!user.isGuest) {
-      if (!profileForm.email.trim()) {
-        newErrors.email = 'Email is required';
-      } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileForm.email)) {
-        newErrors.email = 'Please enter a valid email address';
-      }
+    if (!profileForm.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileForm.email)) {
+      newErrors.email = 'Please enter a valid email address';
     }
 
     setErrors(newErrors);
@@ -166,7 +209,14 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
 
   const handleAvatarSelect = (avatar: string) => {
     audioManager.playSound('click', 0.3);
-    setProfileForm(prev => ({ ...prev, avatar }));
+    setProfileForm(prev => ({ 
+      ...prev, 
+      avatar,
+      profileImage: null // Clear uploaded image when emoji is selected
+    }));
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
   const handleTabChange = (value: string) => {
@@ -212,7 +262,6 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
             <TabsTrigger 
               value="password" 
               className="text-slate-300 data-[state=active]:bg-slate-600 data-[state=active]:text-white"
-              disabled={user.isGuest}
             >
               <Lock className="w-4 h-4 mr-2" />
               Password
@@ -229,34 +278,103 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-6">
-                  <Avatar className="w-20 h-20">
-                    <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(user.points)} text-white text-2xl font-bold`}>
-                      {profileForm.avatar}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h4 className="font-medium text-white mb-2">Choose Avatar</h4>
-                    <p className="text-sm text-slate-400 mb-3">Select an emoji or icon to represent you</p>
+                  <div className="relative">
+                    <Avatar className="w-20 h-20">
+                      <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(user.points)} text-white text-2xl font-bold`}>
+                        {profileForm.profileImage ? (
+                          <img 
+                            src={profileForm.profileImage} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover rounded-full"
+                          />
+                        ) : (
+                          profileForm.avatar
+                        )}
+                      </AvatarFallback>
+                    </Avatar>
+                    {profileForm.profileImage && (
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={handleRemoveImage}
+                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full p-0"
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-white mb-2">Profile Picture</h4>
+                    <p className="text-sm text-slate-400 mb-3">Upload a custom image or choose an emoji avatar</p>
+                    
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="border-slate-600 text-slate-300 hover:bg-slate-700"
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Image
+                      </Button>
+                      
+                      {profileForm.profileImage && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleRemoveImage}
+                          className="border-red-600 text-red-400 hover:bg-red-900/20"
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+                    
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                    />
+                    
+                    {errors.profileImage && (
+                      <div className="flex items-center gap-1 text-red-400 text-sm mt-2">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.profileImage}
+                      </div>
+                    )}
+                    
+                    <div className="text-xs text-slate-500 mt-2">
+                      Supported formats: JPG, PNG, GIF. Max size: 5MB
+                    </div>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-10 gap-2">
-                  {avatarOptions.map((avatar, index) => (
-                    <Button
-                      key={index}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleAvatarSelect(avatar)}
-                      className={`aspect-square text-lg hover:scale-110 transition-transform ${
-                        profileForm.avatar === avatar 
-                          ? 'border-purple-500 bg-purple-500/20' 
-                          : 'border-slate-600 hover:border-slate-500'
-                      }`}
-                    >
-                      {avatar}
-                    </Button>
-                  ))}
-                </div>
+                {!profileForm.profileImage && (
+                  <>
+                    <div className="border-t border-slate-600 pt-4">
+                      <h4 className="font-medium text-white mb-3">Or choose an emoji avatar</h4>
+                      <div className="grid grid-cols-10 gap-2">
+                        {avatarOptions.map((avatar, index) => (
+                          <Button
+                            key={index}
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleAvatarSelect(avatar)}
+                            className={`aspect-square text-lg hover:scale-110 transition-transform ${
+                              profileForm.avatar === avatar 
+                                ? 'border-purple-500 bg-purple-500/20' 
+                                : 'border-slate-600 hover:border-slate-500'
+                            }`}
+                          >
+                            {avatar}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
 
@@ -298,42 +416,28 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                   )}
                 </div>
 
-                {!user.isGuest && (
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-slate-300">Email Address</Label>
-                    <div className="relative">
-                      <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email address"
-                        value={profileForm.email}
-                        onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
-                        className={`pl-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 ${
-                          errors.email ? 'border-red-500' : ''
-                        }`}
-                      />
-                    </div>
-                    {errors.email && (
-                      <div className="flex items-center gap-1 text-red-400 text-sm">
-                        <AlertCircle className="w-4 h-4" />
-                        {errors.email}
-                      </div>
-                    )}
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-slate-300">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email address"
+                      value={profileForm.email}
+                      onChange={(e) => setProfileForm(prev => ({ ...prev, email: e.target.value }))}
+                      className={`pl-10 bg-slate-700 border-slate-600 text-white placeholder-slate-400 ${
+                        errors.email ? 'border-red-500' : ''
+                      }`}
+                    />
                   </div>
-                )}
-
-                {user.isGuest && (
-                  <div className="p-4 bg-amber-900/50 border border-amber-700/50 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertCircle className="w-5 h-5 text-amber-400" />
-                      <span className="font-medium text-amber-300">Guest Account</span>
+                  {errors.email && (
+                    <div className="flex items-center gap-1 text-red-400 text-sm">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.email}
                     </div>
-                    <p className="text-sm text-amber-200">
-                      You're playing as a guest. Create an account to save your progress and access all features!
-                    </p>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 <Button 
                   onClick={handleUpdateProfile}

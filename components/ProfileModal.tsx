@@ -377,23 +377,26 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
                     </Button>
                   </div>
 
-                  <div className="flex items-center justify-between p-4 bg-slate-600/50 rounded-lg border border-slate-600">
-                    <div className="flex items-center gap-3">
-                      <Settings className="w-5 h-5 text-purple-400" />
-                      <div>
-                        <span className="font-medium text-white">Update Profile</span>
-                        <p className="text-sm text-slate-400">Change your avatar, name, and password</p>
+                  {/* Only show Update Profile for registered users */}
+                  {!currentUser.isGuest && (
+                    <div className="flex items-center justify-between p-4 bg-slate-600/50 rounded-lg border border-slate-600">
+                      <div className="flex items-center gap-3">
+                        <Settings className="w-5 h-5 text-purple-400" />
+                        <div>
+                          <span className="font-medium text-white">Update Profile</span>
+                          <p className="text-sm text-slate-400">Change your avatar, name, and password</p>
+                        </div>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleUpdateProfile}
+                        className="border-slate-500 text-slate-300 hover:bg-slate-700"
+                      >
+                        Edit Profile
+                      </Button>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleUpdateProfile}
-                      className="border-slate-500 text-slate-300 hover:bg-slate-700"
-                    >
-                      Edit Profile
-                    </Button>
-                  </div>
+                  )}
 
                   <div className="p-4 bg-slate-600/50 rounded-lg border border-slate-600">
                     <div className="flex items-center gap-3 mb-3">
@@ -438,13 +441,15 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
         </DialogContent>
       </Dialog>
 
-      {/* Update Profile Modal */}
-      <UpdateProfileModal
-        isOpen={showUpdateProfile}
-        onClose={() => setShowUpdateProfile(false)}
-        user={currentUser}
-        onUpdateUser={handleUserUpdate}
-      />
+      {/* Update Profile Modal - Only for registered users */}
+      {!currentUser.isGuest && (
+        <UpdateProfileModal
+          isOpen={showUpdateProfile}
+          onClose={() => setShowUpdateProfile(false)}
+          user={currentUser}
+          onUpdateUser={handleUserUpdate}
+        />
+      )}
     </>
   );
 }
