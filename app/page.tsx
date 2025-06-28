@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { GameBoard } from '@/components/GameBoard';
@@ -20,14 +20,11 @@ import {
   calculateWordStats, 
   isWordComplete, 
   shouldUnlockNextLevel,
-  DIFFICULTY_LABELS,
-  DIFFICULTY_COLORS,
   getNextLevel,
   calculatePoints,
   STARTING_POINTS,
-  UNLOCK_REQUIREMENTS
 } from '@/lib/gameLogic';
-import { Gamepad2, BarChart3, Play, Code2, Heart, User as UserIcon, Settings, Home } from 'lucide-react';
+import { Gamepad2, BarChart3, Play, Code2, Heart, User as UserIcon, Settings, Home as HomeIcon, Trophy, Star } from 'lucide-react';
 
 const initialPlayerStats: PlayerStatsType = {
   gamesPlayed: 0,
@@ -462,7 +459,7 @@ export default function Home() {
                 onClick={() => setGameStarted(false)}
                 className="border-slate-600 text-slate-300 hover:bg-slate-800"
               >
-                <Home className="w-4 h-4 mr-2" />
+                <span className="w-4 h-4 mr-2"><HomeIcon /></span>
                 Menu
               </Button>
             </div>
