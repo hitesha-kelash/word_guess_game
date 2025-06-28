@@ -4,9 +4,10 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trophy, RotateCcw, ArrowUp, Gift, Star, Zap, Target } from 'lucide-react';
+import { Trophy, RotateCcw, ArrowUp, Gift, Star, Zap, Target, Volume2, VolumeX } from 'lucide-react';
 import { GameState, DifficultyLevel } from '@/types/game';
-import { DIFFICULTY_LABELS, getNextLevel, calculatePoints, DIFFICULTY_GRADIENTS } from '@/lib/gameLogic';
+import { DIFFICULTY_LABELS, getNextLevel, calculatePoints, DIFFICULTY_GRADIENTS, calculateLevelUpBonus } from '@/lib/gameLogic';
+import { audioManager } from '@/lib/audioManager';
 
 interface GameOverProps {
   gameState: GameState;
@@ -27,16 +28,30 @@ export function GameOver({
 }: GameOverProps) {
   const { gameStatus, currentWord, currentLevel, guessedLetters, maxWrongGuesses } = gameState;
   const [showCelebration, setShowCelebration] = useState(false);
+  const [audioEnabled, setAudioEnabled] = useState(true);
   const isWon = gameStatus === 'won';
   const nextLevel = getNextLevel(currentLevel);
 
   useEffect(() => {
+    // Play sound effects
     if (isWon) {
+      audioManager.playSound('victory', 0.7);
       setShowCelebration(true);
       const timer = setTimeout(() => setShowCelebration(false), 3000);
       return () => clearTimeout(timer);
+    } else {
+      audioManager.playSound('failure', 0.5);
     }
   }, [isWon]);
+
+  useEffect(() => {
+    // Play level up sound if level was unlocked
+    if (levelUnlocked) {
+      setTimeout(() => {
+        audioManager.playSound('levelUp', 0.8);
+      }, 1000);
+    }
+  }, [levelUnlocked]);
 
   const accuracy = guessedLetters.length > 0 
     ? Math.round((guessedLetters.filter(letter => currentWord.includes(letter)).length / guessedLetters.length) * 100)
@@ -55,6 +70,27 @@ export function GameOver({
     return 'text-red-600';
   };
 
+  const levelUpBonus = levelUnlocked ? calculateLevelUpBonus(levelUnlocked) : 0;
+  const totalPointsEarned = pointsEarned + levelUpBonus;
+
+  const handleNewGame = (level?: DifficultyLevel) => {
+    audioManager.playSound('click');
+    onNewGame(level);
+  };
+
+  const handleLevelChange = (level: DifficultyLevel) => {
+    audioManager.playSound('click');
+    onLevelChange(level);
+    onNewGame(level);
+  };
+
+  const toggleAudio = () => {
+    const newState = !audioEnabled;
+    setAudioEnabled(newState);
+    audioManager.setEnabled(newState);
+    audioManager.playSound('click');
+  };
+
   return (
     <div className="space-y-6">
       {/* Celebration Animation */}
@@ -64,12 +100,24 @@ export function GameOver({
         </div>
       )}
 
+      {/* Audio Control */}
+      <div className="flex justify-end">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleAudio}
+          className="text-slate-400 hover:text-white"
+        >
+          {audioEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+        </Button>
+      </div>
+
       {/* Level Unlock Notification */}
       {levelUnlocked && (
-        <Card className="border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 shadow-lg">
+        <Card className="border-2 border-amber-300 bg-gradient-to-r from-amber-50 to-orange-50 shadow-lg animate-pulse">
           <CardContent className="p-6">
             <div className="flex items-center gap-3 mb-3">
-              <div className="w-12 h-12 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full flex items-center justify-center animate-bounce">
                 <Gift className="w-6 h-6 text-white" />
               </div>
               <div>
@@ -79,6 +127,11 @@ export function GameOver({
                     {DIFFICULTY_LABELS[levelUnlocked]}
                   </Badge> level!
                 </p>
+                {levelUpBonus > 0 && (
+                  <p className="text-sm text-amber-600 font-semibold">
+                    Bonus: +{levelUpBonus.toLocaleString()} points! 🎁
+                  </p>
+                )}
               </div>
             </div>
           </CardContent>
@@ -90,7 +143,7 @@ export function GameOver({
         <CardHeader className={`text-center ${isWon ? 'bg-gradient-to-r from-emerald-50 to-green-50' : 'bg-gradient-to-r from-red-50 to-rose-50'}`}>
           <div className="flex justify-center mb-4">
             {isWon ? (
-              <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center shadow-lg">
+              <div className="w-20 h-20 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full flex items-center justify-center shadow-lg animate-pulse">
                 <Trophy className="w-10 h-10 text-white" />
               </div>
             ) : (
@@ -125,10 +178,10 @@ export function GameOver({
             </div>
             <div className="text-center p-3 bg-gradient-to-br from-amber-50 to-amber-100 rounded-lg border border-amber-200">
               <Star className="w-5 h-5 text-amber-600 mx-auto mb-1" />
-              <div className={`text-lg font-bold ${getPointsColor(pointsEarned)}`}>
-                {pointsEarned > 0 ? '+' : ''}{pointsEarned}
+              <div className={`text-lg font-bold ${getPointsColor(totalPointsEarned)}`}>
+                {totalPointsEarned > 0 ? '+' : ''}{totalPointsEarned.toLocaleString()}
               </div>
-              <div className="text-xs text-amber-800">Points</div>
+              <div className="text-xs text-amber-800">Total Points</div>
             </div>
             <div className="text-center p-3 bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg border border-slate-200">
               <div className="text-lg font-bold text-slate-600">{currentWord.length}</div>
@@ -136,11 +189,38 @@ export function GameOver({
             </div>
           </div>
 
+          {/* Points Breakdown */}
+          {(pointsEarned !== 0 || levelUpBonus > 0) && (
+            <div className="p-4 bg-gradient-to-r from-slate-50 to-slate-100 rounded-lg border">
+              <h4 className="font-semibold text-slate-700 mb-2">Points Breakdown</h4>
+              <div className="space-y-1 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Game Result:</span>
+                  <span className={`font-medium ${getPointsColor(pointsEarned)}`}>
+                    {pointsEarned > 0 ? '+' : ''}{pointsEarned.toLocaleString()}
+                  </span>
+                </div>
+                {levelUpBonus > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-600">Level Unlock Bonus:</span>
+                    <span className="font-medium text-emerald-600">+{levelUpBonus.toLocaleString()}</span>
+                  </div>
+                )}
+                <div className="border-t pt-1 flex justify-between font-semibold">
+                  <span className="text-slate-700">Total:</span>
+                  <span className={getPointsColor(totalPointsEarned)}>
+                    {totalPointsEarned > 0 ? '+' : ''}{totalPointsEarned.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Action Buttons */}
           <div className="space-y-3">
             <div className="flex flex-col sm:flex-row gap-3">
               <Button 
-                onClick={() => onNewGame(currentLevel)} 
+                onClick={() => handleNewGame(currentLevel)} 
                 className="flex-1 h-12 text-base font-semibold"
                 size="lg"
               >
@@ -150,10 +230,7 @@ export function GameOver({
               
               {nextLevel && unlockedLevels.includes(nextLevel) && (
                 <Button 
-                  onClick={() => {
-                    onLevelChange(nextLevel);
-                    onNewGame(nextLevel);
-                  }}
+                  onClick={() => handleLevelChange(nextLevel)}
                   variant="outline"
                   className="flex-1 h-12 text-base font-semibold border-2"
                   size="lg"
@@ -171,10 +248,7 @@ export function GameOver({
                   key={level}
                   variant={currentLevel === level ? "default" : "outline"}
                   size="sm"
-                  onClick={() => {
-                    onLevelChange(level);
-                    onNewGame(level);
-                  }}
+                  onClick={() => handleLevelChange(level)}
                   disabled={!unlockedLevels.includes(level)}
                   className="text-xs font-medium h-10"
                 >

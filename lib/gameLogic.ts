@@ -23,20 +23,33 @@ export const DIFFICULTY_GRADIENTS: Record<DifficultyLevel, string> = {
 };
 
 export const POINTS_SYSTEM = {
-  basic: { win: 100, lose: -25 },
-  medium: { win: 250, lose: -50 },
-  advance: { win: 500, lose: -100 },
-  pro: { win: 1000, lose: -200 }
+  basic: { win: 150, lose: -30 },
+  medium: { win: 300, lose: -60 },
+  advance: { win: 600, lose: -120 },
+  pro: { win: 1200, lose: -240 }
 };
 
 export const UNLOCK_REQUIREMENTS = {
   basic: 0,     // Always unlocked
-  medium: 5,    // Need 5 basic wins
-  advance: 8,   // Need 8 medium wins
-  pro: 12       // Need 12 advance wins
+  medium: 8,    // Need 8 basic wins
+  advance: 15,  // Need 15 medium wins
+  pro: 25       // Need 25 advance wins
+};
+
+// Point thresholds for rank progression
+export const RANK_THRESHOLDS = {
+  beginner: 0,
+  novice: 2000,
+  intermediate: 5000,
+  advanced: 10000,
+  expert: 20000,
+  master: 35000,
+  grandmaster: 50000,
+  legend: 75000
 };
 
 export const STARTING_POINTS = 1000;
+export const NEW_ACCOUNT_BONUS = 1000;
 
 export function getRandomWord(level: DifficultyLevel): string {
   const words = wordsData[level];
@@ -82,7 +95,9 @@ export function isWordComplete(word: string, guessedLetters: string[]): boolean 
 }
 
 export function shouldUnlockNextLevel(level: DifficultyLevel, wins: number): boolean {
-  return wins >= UNLOCK_REQUIREMENTS[level];
+  const nextLevel = getNextLevel(level);
+  if (!nextLevel) return false;
+  return wins >= UNLOCK_REQUIREMENTS[nextLevel];
 }
 
 export function getNextLevel(currentLevel: DifficultyLevel): DifficultyLevel | null {
@@ -97,7 +112,7 @@ export function calculatePoints(level: DifficultyLevel, won: boolean, guessCount
   if (won) {
     // Bonus points for efficiency (fewer guesses)
     const efficiency = Math.max(0, (maxGuesses - guessCount) / maxGuesses);
-    const bonusMultiplier = 1 + (efficiency * 0.8); // Up to 80% bonus
+    const bonusMultiplier = 1 + (efficiency * 1.2); // Up to 120% bonus
     return Math.round(basePoints * bonusMultiplier);
   }
   
@@ -105,19 +120,51 @@ export function calculatePoints(level: DifficultyLevel, won: boolean, guessCount
 }
 
 export function getPointsColor(points: number): string {
-  if (points >= 5000) return 'text-purple-600';
-  if (points >= 3000) return 'text-blue-600';
-  if (points >= 1500) return 'text-emerald-600';
-  if (points >= 500) return 'text-amber-600';
-  return 'text-red-600';
+  if (points >= RANK_THRESHOLDS.legend) return 'text-purple-600';
+  if (points >= RANK_THRESHOLDS.grandmaster) return 'text-pink-600';
+  if (points >= RANK_THRESHOLDS.master) return 'text-blue-600';
+  if (points >= RANK_THRESHOLDS.expert) return 'text-emerald-600';
+  if (points >= RANK_THRESHOLDS.advanced) return 'text-amber-600';
+  if (points >= RANK_THRESHOLDS.intermediate) return 'text-orange-600';
+  if (points >= RANK_THRESHOLDS.novice) return 'text-cyan-600';
+  return 'text-slate-600';
 }
 
 export function getPointsGradient(points: number): string {
-  if (points >= 5000) return 'from-purple-500 to-pink-500';
-  if (points >= 3000) return 'from-blue-500 to-cyan-500';
-  if (points >= 1500) return 'from-emerald-500 to-teal-500';
-  if (points >= 500) return 'from-amber-500 to-orange-500';
-  return 'from-red-500 to-rose-500';
+  if (points >= RANK_THRESHOLDS.legend) return 'from-purple-500 to-pink-500';
+  if (points >= RANK_THRESHOLDS.grandmaster) return 'from-pink-500 to-rose-500';
+  if (points >= RANK_THRESHOLDS.master) return 'from-blue-500 to-cyan-500';
+  if (points >= RANK_THRESHOLDS.expert) return 'from-emerald-500 to-teal-500';
+  if (points >= RANK_THRESHOLDS.advanced) return 'from-amber-500 to-orange-500';
+  if (points >= RANK_THRESHOLDS.intermediate) return 'from-orange-500 to-red-500';
+  if (points >= RANK_THRESHOLDS.novice) return 'from-cyan-500 to-blue-500';
+  return 'from-slate-500 to-slate-600';
+}
+
+export function getRank(points: number): { name: string; icon: string; nextRank?: string; pointsToNext?: number } {
+  const ranks = [
+    { threshold: RANK_THRESHOLDS.legend, name: 'Legend', icon: '🌟' },
+    { threshold: RANK_THRESHOLDS.grandmaster, name: 'Grandmaster', icon: '👑' },
+    { threshold: RANK_THRESHOLDS.master, name: 'Master', icon: '🏆' },
+    { threshold: RANK_THRESHOLDS.expert, name: 'Expert', icon: '⭐' },
+    { threshold: RANK_THRESHOLDS.advanced, name: 'Advanced', icon: '🎯' },
+    { threshold: RANK_THRESHOLDS.intermediate, name: 'Intermediate', icon: '📚' },
+    { threshold: RANK_THRESHOLDS.novice, name: 'Novice', icon: '🎓' },
+    { threshold: RANK_THRESHOLDS.beginner, name: 'Beginner', icon: '🌱' }
+  ];
+
+  for (let i = 0; i < ranks.length; i++) {
+    if (points >= ranks[i].threshold) {
+      const nextRank = i > 0 ? ranks[i - 1] : null;
+      return {
+        ...ranks[i],
+        nextRank: nextRank?.name,
+        pointsToNext: nextRank ? nextRank.threshold - points : undefined
+      };
+    }
+  }
+
+  return ranks[ranks.length - 1];
 }
 
 export function getLevelProgress(level: DifficultyLevel, wins: number): { current: number; required: number; percentage: number } {
@@ -130,4 +177,13 @@ export function getLevelProgress(level: DifficultyLevel, wins: number): { curren
   const percentage = Math.min(100, (wins / required) * 100);
   
   return { current: wins, required, percentage };
+}
+
+export function calculateLevelUpBonus(newLevel: DifficultyLevel): number {
+  const bonuses = {
+    medium: 500,
+    advance: 1000,
+    pro: 2000
+  };
+  return bonuses[newLevel] || 0;
 }

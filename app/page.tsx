@@ -23,8 +23,11 @@ import {
   getNextLevel,
   calculatePoints,
   STARTING_POINTS,
+  calculateLevelUpBonus,
+  getRank
 } from '@/lib/gameLogic';
-import { Gamepad2, BarChart3, Play, Code2, Heart, User as UserIcon, Settings, Home as HomeIcon, Trophy, Star } from 'lucide-react';
+import { audioManager } from '@/lib/audioManager';
+import { Gamepad2, BarChart3, Play, Code2, Heart, User as UserIcon, Home as HomeIcon, Trophy, Star } from 'lucide-react';
 
 const initialPlayerStats: PlayerStatsType = {
   gamesPlayed: 0,
@@ -51,6 +54,7 @@ export default function Home() {
   const [levelUnlocked, setLevelUnlocked] = useState<DifficultyLevel | null>(null);
   const [currentSession, setCurrentSession] = useState<GameSession | null>(null);
   const [gameProcessed, setGameProcessed] = useState(false);
+  const [previousRank, setPreviousRank] = useState<string | null>(null);
 
   const createInitialGameState = useCallback((level: DifficultyLevel = 'basic'): GameState => {
     const word = getRandomWord(level);
@@ -71,6 +75,8 @@ export default function Home() {
     if (gameState.gameStatus !== 'playing' || gameState.guessedLetters.includes(letter)) {
       return;
     }
+
+    audioManager.playSound('click', 0.3);
 
     setGameState(prev => {
       const newGuessedLetters = [...prev.guessedLetters, letter];
@@ -105,6 +111,10 @@ export default function Home() {
         gameState.guessedLetters.length, 
         gameState.maxWrongGuesses
       );
+      
+      // Store previous rank for comparison
+      const currentRank = getRank(playerStats.totalPoints);
+      setPreviousRank(currentRank.name);
       
       setPlayerStats(prev => {
         const newStats = { ...prev };
@@ -142,6 +152,11 @@ export default function Home() {
           if (shouldUnlockNextLevel(gameState.currentLevel, levelStat.won)) {
             newStats.unlockedLevels.push(nextLevel);
             setLevelUnlocked(nextLevel);
+            
+            // Add level unlock bonus
+            const levelUpBonus = calculateLevelUpBonus(nextLevel);
+            newStats.totalPoints += levelUpBonus;
+            levelStat.pointsEarned += levelUpBonus;
           }
         }
 
@@ -160,7 +175,7 @@ export default function Home() {
         } : null);
       }
     }
-  }, [gameState.gameStatus, gameState.currentLevel, gameState.guessedLetters.length, gameState.maxWrongGuesses, gameState.currentWord, gameProcessed, setPlayerStats, currentSession]);
+  }, [gameState.gameStatus, gameState.currentLevel, gameState.guessedLetters.length, gameState.maxWrongGuesses, gameState.currentWord, gameProcessed, setPlayerStats, currentSession, playerStats.totalPoints]);
 
   const handleNewGame = useCallback((level?: DifficultyLevel) => {
     const newLevel = level || gameState.currentLevel;
@@ -200,6 +215,22 @@ export default function Home() {
   const handleAuth = (newUser: User) => {
     setUser(newUser);
     setShowAuth(false);
+    
+    // If it's a new account (not guest), reset stats with bonus points
+    if (!newUser.isGuest && newUser.points === 1000) {
+      setPlayerStats({
+        ...initialPlayerStats,
+        totalPoints: newUser.points
+      });
+    }
+  };
+
+  const handleGuestPlay = () => {
+    // Reset stats for guest with reduced starting points
+    setPlayerStats({
+      ...initialPlayerStats,
+      totalPoints: 500
+    });
   };
 
   const handleSignOut = () => {
@@ -209,6 +240,7 @@ export default function Home() {
     setGameState(createInitialGameState('basic'));
     setCurrentSession(null);
     setGameProcessed(false);
+    setPlayerStats(initialPlayerStats);
   };
 
   const wrongLetters = gameState.guessedLetters.filter(letter => 
@@ -313,6 +345,7 @@ export default function Home() {
           isOpen={showAuth} 
           onClose={() => setShowAuth(false)} 
           onAuth={handleAuth}
+          onGuestPlay={handleGuestPlay}
         />
       </div>
     );
@@ -368,6 +401,7 @@ export default function Home() {
             <Button 
               size="lg" 
               onClick={() => {
+                audioManager.playSound('click');
                 setGameStarted(true);
                 handleNewGame();
               }}
@@ -379,7 +413,10 @@ export default function Home() {
             <Button 
               size="lg" 
               variant="outline" 
-              onClick={() => setShowStats(true)}
+              onClick={() => {
+                audioManager.playSound('click');
+                setShowStats(true);
+              }}
               className="px-8 py-6 text-lg border-slate-600 text-slate-300 hover:bg-slate-800"
             >
               <BarChart3 className="w-5 h-5 mr-2" />
@@ -390,6 +427,7 @@ export default function Home() {
           <LevelSelector 
             playerStats={playerStats}
             onLevelSelect={(level) => {
+              audioManager.playSound('click');
               setGameStarted(true);
               handleLevelChange(level);
             }}
@@ -401,7 +439,10 @@ export default function Home() {
               <div className="text-center">
                 <Button 
                   variant="outline" 
-                  onClick={() => setShowStats(false)}
+                  onClick={() => {
+                    audioManager.playSound('click');
+                    setShowStats(false);
+                  }}
                   className="border-slate-600 text-slate-300 hover:bg-slate-800"
                 >
                   Hide Statistics
@@ -439,7 +480,10 @@ export default function Home() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => setShowStats(!showStats)}
+                onClick={() => {
+                  audioManager.playSound('click');
+                  setShowStats(!showStats);
+                }}
                 className="border-slate-600 text-slate-300 hover:bg-slate-800"
               >
                 <BarChart3 className="w-4 h-4 mr-2" />
@@ -448,7 +492,10 @@ export default function Home() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => handleNewGame()}
+                onClick={() => {
+                  audioManager.playSound('click');
+                  handleNewGame();
+                }}
                 className="border-slate-600 text-slate-300 hover:bg-slate-800"
               >
                 New Game
@@ -456,10 +503,13 @@ export default function Home() {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={() => setGameStarted(false)}
+                onClick={() => {
+                  audioManager.playSound('click');
+                  setGameStarted(false);
+                }}
                 className="border-slate-600 text-slate-300 hover:bg-slate-800"
               >
-                <span className="w-4 h-4 mr-2"><HomeIcon /></span>
+                <HomeIcon className="w-4 h-4 mr-2" />
                 Menu
               </Button>
             </div>

@@ -22,6 +22,7 @@ export interface User {
   email: string;
   points: number;
   joinedAt: string;
+  isGuest: boolean;
 }
 
 export interface PlayerStats {
@@ -48,4 +49,9 @@ export interface GameSession {
   won: boolean;
   word: string;
   guessCount: number;
+}
+
+export interface AudioSettings {
+  enabled: boolean;
+  volume: number;
 }
