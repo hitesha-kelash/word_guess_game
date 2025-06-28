@@ -204,6 +204,7 @@ export function getLevelProgress(level: DifficultyLevel, wins: number): { curren
 
 export function calculateLevelUpBonus(newLevel: DifficultyLevel): number {
   const bonuses = {
+    basic: 0,
     medium: 500,
     advance: 1000,
     pro: 2000
