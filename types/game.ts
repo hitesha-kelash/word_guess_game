@@ -11,9 +11,11 @@ export interface GameState {
   guessedLetters: string[];
   wrongGuesses: number;
   maxWrongGuesses: number;
-  gameStatus: 'playing' | 'won' | 'lost';
+  gameStatus: 'playing' | 'won' | 'lost' | 'timeout';
   currentLevel: DifficultyLevel;
   stats: GameStats;
+  timeRemaining: number;
+  gameStartTime: number;
 }
 
 export interface User {
@@ -49,6 +51,7 @@ export interface GameSession {
   won: boolean;
   word: string;
   guessCount: number;
+  completedInTime: boolean;
 }
 
 export interface AudioSettings {

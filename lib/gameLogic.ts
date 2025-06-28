@@ -22,11 +22,20 @@ export const DIFFICULTY_GRADIENTS: Record<DifficultyLevel, string> = {
   pro: 'from-red-400 to-red-600'
 };
 
+// Updated points system as requested
 export const POINTS_SYSTEM = {
-  basic: { win: 150, lose: -30 },
-  medium: { win: 300, lose: -60 },
-  advance: { win: 600, lose: -120 },
-  pro: { win: 1200, lose: -240 }
+  basic: { win: 10, lose: -5 },
+  medium: { win: 15, lose: -10 },
+  advance: { win: 30, lose: -15 },
+  pro: { win: 50, lose: -25 }
+};
+
+// Timer durations in seconds for each level
+export const TIMER_DURATIONS = {
+  basic: 300,    // 5 minutes
+  medium: 240,   // 4 minutes
+  advance: 180,  // 3 minutes
+  pro: 120       // 2 minutes
 };
 
 export const UNLOCK_REQUIREMENTS = {
@@ -106,17 +115,31 @@ export function getNextLevel(currentLevel: DifficultyLevel): DifficultyLevel | n
   return currentIndex < levels.length - 1 ? levels[currentIndex + 1] : null;
 }
 
-export function calculatePoints(level: DifficultyLevel, won: boolean, guessCount: number, maxGuesses: number): number {
+export function calculatePoints(level: DifficultyLevel, won: boolean, guessCount: number, maxGuesses: number, timeBonus: boolean = false): number {
   const basePoints = POINTS_SYSTEM[level][won ? 'win' : 'lose'];
   
   if (won) {
     // Bonus points for efficiency (fewer guesses)
     const efficiency = Math.max(0, (maxGuesses - guessCount) / maxGuesses);
-    const bonusMultiplier = 1 + (efficiency * 1.2); // Up to 120% bonus
-    return Math.round(basePoints * bonusMultiplier);
+    const bonusMultiplier = 1 + (efficiency * 0.5); // Up to 50% bonus for efficiency
+    
+    // Time bonus for completing within time limit
+    const timeBonusMultiplier = timeBonus ? 1.2 : 1; // 20% bonus for completing on time
+    
+    return Math.round(basePoints * bonusMultiplier * timeBonusMultiplier);
   }
   
   return basePoints;
+}
+
+export function getTimerDuration(level: DifficultyLevel): number {
+  return TIMER_DURATIONS[level];
+}
+
+export function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
 }
 
 export function getPointsColor(points: number): string {

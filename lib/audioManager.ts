@@ -96,6 +96,40 @@ export class AudioManager {
       clickData[i] = Math.sin(2 * Math.PI * 800 * time) * envelope * 0.05;
     }
     this.sounds.set('click', clickBuffer);
+
+    // Generate warning sound (urgent beep)
+    const warningBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.5, this.audioContext.sampleRate);
+    const warningData = warningBuffer.getChannelData(0);
+    
+    for (let i = 0; i < warningData.length; i++) {
+      const time = i / this.audioContext.sampleRate;
+      const envelope = Math.exp(-time * 4);
+      warningData[i] = Math.sin(2 * Math.PI * 1000 * time) * envelope * 0.2;
+    }
+    this.sounds.set('warning', warningBuffer);
+
+    // Generate tick sound (clock tick)
+    const tickBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 0.1, this.audioContext.sampleRate);
+    const tickData = tickBuffer.getChannelData(0);
+    
+    for (let i = 0; i < tickData.length; i++) {
+      const time = i / this.audioContext.sampleRate;
+      const envelope = Math.exp(-time * 30);
+      tickData[i] = Math.sin(2 * Math.PI * 1200 * time) * envelope * 0.1;
+    }
+    this.sounds.set('tick', tickBuffer);
+
+    // Generate time up buzzer (long harsh buzzer)
+    const timeUpBuffer = this.audioContext.createBuffer(1, this.audioContext.sampleRate * 2, this.audioContext.sampleRate);
+    const timeUpData = timeUpBuffer.getChannelData(0);
+    
+    for (let i = 0; i < timeUpData.length; i++) {
+      const time = i / this.audioContext.sampleRate;
+      const envelope = Math.exp(-time * 1);
+      const frequency = 150 + Math.sin(time * 20) * 50; // Warbling effect
+      timeUpData[i] = Math.sin(2 * Math.PI * frequency * time) * envelope * 0.2;
+    }
+    this.sounds.set('timeUp', timeUpBuffer);
   }
 
   async playSound(soundName: string, volume: number = 1) {

@@ -13,6 +13,7 @@ import { AuthModal } from '@/components/AuthModal';
 import { UserProfile } from '@/components/UserProfile';
 import { RealTimeStats } from '@/components/RealTimeStats';
 import { LevelSelector } from '@/components/LevelSelector';
+import { GameTimer } from '@/components/GameTimer';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { GameState, PlayerStats as PlayerStatsType, DifficultyLevel, User, GameSession } from '@/types/game';
 import { 
@@ -24,7 +25,8 @@ import {
   calculatePoints,
   STARTING_POINTS,
   calculateLevelUpBonus,
-  getRank
+  getRank,
+  getTimerDuration
 } from '@/lib/gameLogic';
 import { audioManager } from '@/lib/audioManager';
 import { Gamepad2, BarChart3, Play, Code2, Heart, User as UserIcon, Home as HomeIcon, Trophy, Star } from 'lucide-react';
@@ -58,6 +60,7 @@ export default function Home() {
 
   const createInitialGameState = useCallback((level: DifficultyLevel = 'basic'): GameState => {
     const word = getRandomWord(level);
+    const timerDuration = getTimerDuration(level);
     return {
       currentWord: word,
       guessedLetters: [],
@@ -65,7 +68,9 @@ export default function Home() {
       maxWrongGuesses: 10,
       gameStatus: 'playing',
       currentLevel: level,
-      stats: calculateWordStats(word)
+      stats: calculateWordStats(word),
+      timeRemaining: timerDuration,
+      gameStartTime: Date.now()
     };
   }, []);
 
@@ -83,7 +88,7 @@ export default function Home() {
       const isCorrect = prev.currentWord.includes(letter);
       const newWrongGuesses = isCorrect ? prev.wrongGuesses : prev.wrongGuesses + 1;
       
-      let newStatus: 'playing' | 'won' | 'lost' = 'playing';
+      let newStatus: 'playing' | 'won' | 'lost' | 'timeout' = 'playing';
       if (isWordComplete(prev.currentWord, newGuessedLetters)) {
         newStatus = 'won';
       } else if (newWrongGuesses >= prev.maxWrongGuesses) {
@@ -99,17 +104,33 @@ export default function Home() {
     });
   }, [gameState.gameStatus, gameState.guessedLetters]);
 
+  const handleTimeUp = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      gameStatus: 'timeout'
+    }));
+  }, []);
+
+  const handleTimeUpdate = useCallback((newTime: number) => {
+    setGameState(prev => ({
+      ...prev,
+      timeRemaining: Math.max(0, newTime)
+    }));
+  }, []);
+
   // Process game end only once
   useEffect(() => {
-    if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost') && !gameProcessed) {
+    if ((gameState.gameStatus === 'won' || gameState.gameStatus === 'lost' || gameState.gameStatus === 'timeout') && !gameProcessed) {
       setGameProcessed(true);
       
       const isWon = gameState.gameStatus === 'won';
+      const completedInTime = gameState.gameStatus !== 'timeout';
       const points = calculatePoints(
         gameState.currentLevel, 
         isWon, 
         gameState.guessedLetters.length, 
-        gameState.maxWrongGuesses
+        gameState.maxWrongGuesses,
+        completedInTime
       );
       
       // Store previous rank for comparison
@@ -171,7 +192,8 @@ export default function Home() {
           pointsEarned: points,
           won: isWon,
           word: gameState.currentWord,
-          guessCount: gameState.guessedLetters.length
+          guessCount: gameState.guessedLetters.length,
+          completedInTime
         } : null);
       }
     }
@@ -190,7 +212,8 @@ export default function Home() {
       level: newLevel,
       won: false,
       word: '',
-      guessCount: 0
+      guessCount: 0,
+      completedInTime: true
     });
   }, [gameState.currentLevel, createInitialGameState]);
 
@@ -207,7 +230,8 @@ export default function Home() {
         level: level,
         won: false,
         word: '',
-        guessCount: 0
+        guessCount: 0,
+        completedInTime: true
       });
     }
   }, [playerStats.unlockedLevels, createInitialGameState]);
@@ -249,7 +273,7 @@ export default function Home() {
 
   // Calculate current points for display
   const currentPoints = gameState.gameStatus === 'playing' && currentSession
-    ? calculatePoints(gameState.currentLevel, true, gameState.guessedLetters.length, gameState.maxWrongGuesses)
+    ? calculatePoints(gameState.currentLevel, true, gameState.guessedLetters.length, gameState.maxWrongGuesses, gameState.gameStatus !== 'timeout')
     : currentSession?.pointsEarned || 0;
 
   if (!user) {
@@ -523,6 +547,15 @@ export default function Home() {
         {currentSession && gameState.gameStatus === 'playing' && (
           <RealTimeStats gameState={gameState} session={currentSession} />
         )}
+
+        {/* Timer Component */}
+        <GameTimer
+          level={gameState.currentLevel}
+          gameStatus={gameState.gameStatus}
+          onTimeUp={handleTimeUp}
+          timeRemaining={gameState.timeRemaining}
+          onTimeUpdate={handleTimeUpdate}
+        />
 
         {gameState.gameStatus === 'playing' ? (
           <>
