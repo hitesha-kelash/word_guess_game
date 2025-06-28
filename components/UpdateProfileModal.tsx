@@ -611,7 +611,7 @@ export function UpdateProfileModal({ isOpen, onClose, user, onUpdateUser }: Upda
                     <>
                       <Lock className="w-4 h-4 mr-2" />
                       Update Password
-                    </Button>
+                    </>
                   )}
                 </Button>
               </CardContent>
