@@ -30,13 +30,32 @@ export function UserProfile({ user, stats, onSignOut, onUserUpdate }: UserProfil
     onSignOut();
   };
 
+  const handleUserUpdate = (updatedUser: UserType) => {
+    onUserUpdate(updatedUser);
+    setShowProfileModal(false);
+  };
+
   const handleCloseModal = () => {
     setShowProfileModal(false);
   };
 
-  const handleUserUpdate = (updatedUser: UserType) => {
-    onUserUpdate(updatedUser);
-    setShowProfileModal(false);
+  // Get the display avatar - either uploaded image, custom avatar, or default
+  const getDisplayAvatar = () => {
+    if (user.profileImage) {
+      return (
+        <img 
+          src={user.profileImage} 
+          alt="Profile" 
+          className="w-full h-full object-cover rounded-full"
+        />
+      );
+    }
+    
+    if (user.avatar) {
+      return user.avatar;
+    }
+    
+    return user.isGuest ? '👤' : user.name.charAt(0).toUpperCase();
   };
 
   return (
@@ -52,8 +71,8 @@ export function UserProfile({ user, stats, onSignOut, onUserUpdate }: UserProfil
           title="View Profile"
         >
           <Avatar className="w-10 h-10 cursor-pointer">
-            <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(stats.totalPoints)} text-white text-sm font-bold`}>
-              {user.isGuest ? '👤' : user.}
+            <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(stats.totalPoints)} text-white text-sm font-bold ${user.profileImage ? 'p-0' : ''}`}>
+              {getDisplayAvatar()}
             </AvatarFallback>
           </Avatar>
         </Button>

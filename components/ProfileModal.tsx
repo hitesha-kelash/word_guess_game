@@ -85,6 +85,25 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut, onUserUp
     setShowUpdateProfile(false);
   };
 
+  // Get the display avatar - either uploaded image, custom avatar, or default
+  const getDisplayAvatar = () => {
+    if (user.profileImage) {
+      return (
+        <img 
+          src={user.profileImage} 
+          alt="Profile" 
+          className="w-full h-full object-cover rounded-full"
+        />
+      );
+    }
+    
+    if (user.avatar) {
+      return user.avatar;
+    }
+    
+    return user.isGuest ? '👤' : user.name.charAt(0).toUpperCase();
+  };
+
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
@@ -101,8 +120,8 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut, onUserUp
             
             <DialogTitle className="flex items-center gap-3 text-white pr-10">
               <Avatar className="w-12 h-12">
-                <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(stats.totalPoints)} text-white text-lg font-bold`}>
-                  {user.isGuest ? '👤' : user.name.charAt(0).toUpperCase()}
+                <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(stats.totalPoints)} text-white text-lg font-bold ${user.profileImage ? 'p-0' : ''}`}>
+                  {getDisplayAvatar()}
                 </AvatarFallback>
               </Avatar>
               <div>

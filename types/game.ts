@@ -25,6 +25,8 @@ export interface User {
   points: number;
   joinedAt: string;
   isGuest: boolean;
+  avatar?: string; // For emoji avatars
+  profileImage?: string; // For uploaded images
 }
 
 export interface PlayerStats {
