@@ -14,9 +14,10 @@ interface UserProfileProps {
   user: UserType;
   stats: PlayerStats;
   onSignOut: () => void;
+  onUserUpdate: (updatedUser: UserType) => void;
 }
 
-export function UserProfile({ user, stats, onSignOut }: UserProfileProps) {
+export function UserProfile({ user, stats, onSignOut, onUserUpdate }: UserProfileProps) {
   const [showProfileModal, setShowProfileModal] = useState(false);
 
   const handleProfileClick = () => {
@@ -30,6 +31,11 @@ export function UserProfile({ user, stats, onSignOut }: UserProfileProps) {
   };
 
   const handleCloseModal = () => {
+    setShowProfileModal(false);
+  };
+
+  const handleUserUpdate = (updatedUser: UserType) => {
+    onUserUpdate(updatedUser);
     setShowProfileModal(false);
   };
 
@@ -93,6 +99,7 @@ export function UserProfile({ user, stats, onSignOut }: UserProfileProps) {
         user={user}
         stats={stats}
         onSignOut={onSignOut}
+        onUserUpdate={handleUserUpdate}
       />
     </>
   );

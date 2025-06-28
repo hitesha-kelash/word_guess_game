@@ -267,6 +267,11 @@ export default function Home() {
     setPlayerStats(initialPlayerStats);
   };
 
+  // Handle user profile updates
+  const handleUserUpdate = useCallback((updatedUser: User) => {
+    setUser(updatedUser);
+  }, [setUser]);
+
   const wrongLetters = gameState.guessedLetters.filter(letter => 
     !gameState.currentWord.includes(letter)
   );
@@ -394,7 +399,7 @@ export default function Home() {
               </p>
             </div>
             
-            <UserProfile user={user} stats={playerStats} onSignOut={handleSignOut} />
+            <UserProfile user={user} stats={playerStats} onSignOut={handleSignOut} onUserUpdate={handleUserUpdate} />
           </div>
 
           {/* Developer Credits - Compact */}
@@ -539,7 +544,7 @@ export default function Home() {
             </div>
           </div>
           
-          <UserProfile user={user} stats={playerStats} onSignOut={handleSignOut} />
+          <UserProfile user={user} stats={playerStats} onSignOut={handleSignOut} onUserUpdate={handleUserUpdate} />
         </div>
 
         {showStats && <PlayerStats stats={playerStats} />}

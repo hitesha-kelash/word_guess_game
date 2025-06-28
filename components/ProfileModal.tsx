@@ -45,12 +45,12 @@ interface ProfileModalProps {
   user: UserType;
   stats: PlayerStats;
   onSignOut: () => void;
+  onUserUpdate: (updatedUser: UserType) => void;
 }
 
-export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: ProfileModalProps) {
+export function ProfileModal({ isOpen, onClose, user, stats, onSignOut, onUserUpdate }: ProfileModalProps) {
   const [audioEnabled, setAudioEnabled] = useState(audioManager.isEnabled());
   const [showUpdateProfile, setShowUpdateProfile] = useState(false);
-  const [currentUser, setCurrentUser] = useState(user);
   const rank = getRank(stats.totalPoints);
 
   const handleClose = () => {
@@ -77,11 +77,8 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
   };
 
   const handleUserUpdate = (updatedUser: UserType) => {
-    setCurrentUser(updatedUser);
-    // Close the update profile modal automatically
+    onUserUpdate(updatedUser);
     setShowUpdateProfile(false);
-    // In a real app, you'd also update the parent component's user state
-    // For now, we'll just update the local state to reflect changes immediately
   };
 
   const handleCloseUpdateProfile = () => {
@@ -105,13 +102,13 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
             <DialogTitle className="flex items-center gap-3 text-white pr-10">
               <Avatar className="w-12 h-12">
                 <AvatarFallback className={`bg-gradient-to-r ${getPointsGradient(stats.totalPoints)} text-white text-lg font-bold`}>
-                  {currentUser.isGuest ? '👤' : currentUser.name.charAt(0).toUpperCase()}
+                  {user.isGuest ? '👤' : user.name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-xl">{currentUser.name}</span>
-                  {currentUser.isGuest && <Badge variant="secondary" className="text-xs bg-slate-700 text-slate-300">Guest</Badge>}
+                  <span className="text-xl">{user.name}</span>
+                  {user.isGuest && <Badge variant="secondary" className="text-xs bg-slate-700 text-slate-300">Guest</Badge>}
                 </div>
                 <div className="flex items-center gap-1 text-sm text-slate-400">
                   <span>{rank.icon}</span>
@@ -232,14 +229,14 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
                         <span className="font-medium text-slate-200">Member Since</span>
                       </div>
                       <div className="text-sm text-cyan-400">
-                        {currentUser.isGuest ? 'Guest Session' : new Date(currentUser.joinedAt).toLocaleDateString()}
+                        {user.isGuest ? 'Guest Session' : new Date(user.joinedAt).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {currentUser.isGuest && (
+              {user.isGuest && (
                 <Card className="bg-gradient-to-r from-amber-900/50 to-orange-900/50 border-2 border-amber-700/50">
                   <CardContent className="p-6">
                     <div className="flex items-center gap-3 mb-3">
@@ -385,7 +382,7 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
                   </div>
 
                   {/* Only show Update Profile for registered users */}
-                  {!currentUser.isGuest && (
+                  {!user.isGuest && (
                     <div className="flex items-center justify-between p-4 bg-slate-600/50 rounded-lg border border-slate-600">
                       <div className="flex items-center gap-3">
                         <Settings className="w-5 h-5 text-purple-400" />
@@ -413,22 +410,22 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-slate-400">Name:</span>
-                        <span className="text-white">{currentUser.name}</span>
+                        <span className="text-white">{user.name}</span>
                       </div>
-                      {!currentUser.isGuest && (
+                      {!user.isGuest && (
                         <div className="flex justify-between">
                           <span className="text-slate-400">Email:</span>
-                          <span className="text-white">{currentUser.email}</span>
+                          <span className="text-white">{user.email}</span>
                         </div>
                       )}
                       <div className="flex justify-between">
                         <span className="text-slate-400">Account Type:</span>
-                        <span className="text-white">{currentUser.isGuest ? 'Guest' : 'Registered'}</span>
+                        <span className="text-white">{user.isGuest ? 'Guest' : 'Registered'}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-slate-400">Joined:</span>
                         <span className="text-white">
-                          {currentUser.isGuest ? 'Current Session' : new Date(currentUser.joinedAt).toLocaleDateString()}
+                          {user.isGuest ? 'Current Session' : new Date(user.joinedAt).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -439,7 +436,7 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
                     variant="destructive"
                     className="w-full"
                   >
-                    {currentUser.isGuest ? 'End Session' : 'Sign Out'}
+                    {user.isGuest ? 'End Session' : 'Sign Out'}
                   </Button>
                 </CardContent>
               </Card>
@@ -449,11 +446,11 @@ export function ProfileModal({ isOpen, onClose, user, stats, onSignOut }: Profil
       </Dialog>
 
       {/* Update Profile Modal - Only for registered users */}
-      {!currentUser.isGuest && (
+      {!user.isGuest && (
         <UpdateProfileModal
           isOpen={showUpdateProfile}
           onClose={handleCloseUpdateProfile}
-          user={currentUser}
+          user={user}
           onUpdateUser={handleUserUpdate}
         />
       )}
