@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Lock, CheckCircle, Star, Trophy, Target } from 'lucide-react';
+import { Lock, CheckCircle, Star, Trophy, Target, Play } from 'lucide-react';
 import { PlayerStats, DifficultyLevel } from '@/types/game';
 import { DIFFICULTY_LABELS, DIFFICULTY_GRADIENTS, getLevelProgress, UNLOCK_REQUIREMENTS } from '@/lib/gameLogic';
 
